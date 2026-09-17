@@ -1,0 +1,6 @@
+{
+  "name": "ResumeAI — AI Resume Analyzer",
+  "description": "Production-quality AI resume analyzer providing evidence-based ATS-style compatibility scores, skills and keyword analysis, improvement recommendations, and interview preparation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
