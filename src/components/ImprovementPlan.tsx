@@ -2,6 +2,15 @@ import React from 'react';
 import { Rocket, AlertCircle, HelpCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { ImprovementPriority } from '../types';
 
+const toText = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val.problem || val.action || val.recommendedAction || val.whyItMatters || val.text || val.item || JSON.stringify(val);
+  }
+  return String(val);
+};
+
 interface ImprovementPlanProps {
   improvements: ImprovementPriority[];
   onOpenImprovementWorkbench?: () => void;
@@ -56,7 +65,7 @@ export const ImprovementPlan: React.FC<ImprovementPlanProps> = ({
 
                 <div className="flex-1 space-y-2">
                   <h4 className="text-sm font-bold text-slate-900">
-                    {imp.problem}
+                    {toText(imp.problem)}
                   </h4>
 
                   {/* Why it matters */}
@@ -64,7 +73,7 @@ export const ImprovementPlan: React.FC<ImprovementPlanProps> = ({
                     <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <div>
                       <span className="font-semibold">Why this matters to recruiters:</span>{' '}
-                      {imp.whyItMatters}
+                      {toText(imp.whyItMatters)}
                     </div>
                   </div>
 
@@ -73,7 +82,7 @@ export const ImprovementPlan: React.FC<ImprovementPlanProps> = ({
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
                       <span className="font-semibold">Recommended Action:</span>{' '}
-                      {imp.recommendedAction}
+                      {toText(imp.recommendedAction)}
                     </div>
                   </div>
                 </div>

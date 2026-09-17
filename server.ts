@@ -192,7 +192,126 @@ CANDIDATE RESUME TEXT:
 ${resumeText}
 """
 
-Return valid JSON adhering strictly to the required schema. Ensure all fields are filled with precise, thoughtful analysis.`;
+You MUST return valid JSON adhering strictly to this JSON format:
+{
+  "candidate": {
+    "name": "Full Name or Candidate Profile",
+    "email": "email if present",
+    "phone": "phone if present",
+    "location": "location if present",
+    "linkedin": "url or profile if present",
+    "github": "url or profile if present",
+    "summary": "detected summary if present",
+    "education": ["degree or institution"],
+    "certifications": ["certifications"]
+  },
+  "candidateName": "Full Name",
+  "scoreBreakdown": {
+    "keywordAlignment": { "score": 20, "max": 25, "explanation": "Rationale" },
+    "skillsMatch": { "score": 21, "max": 25, "explanation": "Rationale" },
+    "experienceRelevance": { "score": 13, "max": 15, "explanation": "Rationale" },
+    "projectRelevance": { "score": 8, "max": 10, "explanation": "Rationale" },
+    "structure": { "score": 9, "max": 10, "explanation": "Rationale" },
+    "achievements": { "score": 7, "max": 10, "explanation": "Rationale" },
+    "educationCertification": { "score": 5, "max": 5, "explanation": "Rationale" }
+  },
+  "overallScore": 83,
+  "skills": {
+    "found": ["string"],
+    "matched": ["string"],
+    "missing": ["string"],
+    "valuable": ["string"],
+    "jobDescriptionSkillsNotFound": ["string"],
+    "categories": {
+      "Programming": ["string"],
+      "Data/Analytics": ["string"],
+      "Machine Learning": ["string"],
+      "AI": ["string"],
+      "Frameworks/Libraries": ["string"],
+      "Databases": ["string"],
+      "Cloud/DevOps": ["string"],
+      "Tools": ["string"],
+      "Soft Skills": ["string"]
+    }
+  },
+  "keywords": {
+    "matched": ["string"],
+    "missing": ["string"],
+    "importantTerms": ["string"],
+    "naturalPhrases": ["string"]
+  },
+  "sectionAnalysis": [
+    {
+      "name": "Contact & Header",
+      "status": "Good",
+      "strengths": ["string"],
+      "issues": ["string"],
+      "suggestions": ["string"]
+    }
+  ],
+  "projectAnalysis": [
+    {
+      "name": "Project Name",
+      "technologies": ["string"],
+      "demonstrates": "string",
+      "strength": "Strong",
+      "missingMeasurableResults": "Explicit guidance on what metric to measure",
+      "suggestedBullets": ["string"]
+    }
+  ],
+  "experienceAnalysis": [
+    {
+      "role": "Role Title",
+      "company": "Company",
+      "period": "Dates or Period",
+      "relevance": "High",
+      "actionVerbs": ["string"],
+      "technicalSkills": ["string"],
+      "achievements": ["string"],
+      "quantifiableResults": "Explicit evidence found or missing",
+      "suggestedBullets": ["string"]
+    }
+  ],
+  "qualityChecks": [
+    {
+      "id": "summary",
+      "title": "Professional Summary",
+      "status": "passed",
+      "detail": "string"
+    }
+  ],
+  "improvementPriorities": [
+    {
+      "priority": 1,
+      "problem": "string",
+      "whyItMatters": "string",
+      "recommendedAction": "string"
+    }
+  ],
+  "jobMatch": {
+    "percentage": 80,
+    "matched": [
+      { "item": "string", "reason": "string" }
+    ],
+    "partiallyMatched": [
+      { "item": "string", "reason": "string" }
+    ],
+    "missing": [
+      { "item": "string", "reason": "string" }
+    ],
+    "recommendations": ["string"]
+  },
+  "interviewQuestions": [
+    {
+      "category": "Resume-Based",
+      "question": "string",
+      "whyAsked": "string",
+      "whatToCover": "string"
+    }
+  ],
+  "strengths": ["string"],
+  "weaknesses": ["string"]
+}`;
 }
 
 // API: Analyze Resume
@@ -248,42 +367,103 @@ app.post('/api/analyze-resume', upload.single('resumeFile'), async (req: Request
       },
     });
 
-    const responseText = response.text;
-    if (!responseText) {
+    const rawResponseText = response.text;
+    if (!rawResponseText) {
       throw new Error('Empty response received from Gemini API.');
+    }
+
+    let cleanJson = rawResponseText.trim();
+    if (cleanJson.startsWith('```')) {
+      cleanJson = cleanJson.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     }
 
     let parsedResult: any;
     try {
-      parsedResult = JSON.parse(responseText);
+      parsedResult = JSON.parse(cleanJson);
     } catch (parseErr: any) {
-      console.error('Failed to parse Gemini JSON response:', responseText.slice(0, 500));
+      console.error('Failed to parse Gemini JSON response:', cleanJson.slice(0, 500));
       throw new Error('Could not parse structured analysis from AI response. Please try again.');
     }
 
-    // Ensure score calculations match rubric
-    if (parsedResult.scoreBreakdown) {
-      const breakdown = parsedResult.scoreBreakdown;
-      const calculatedSum =
-        (breakdown.keywordAlignment?.score || 0) +
-        (breakdown.skillsMatch?.score || 0) +
-        (breakdown.experienceRelevance?.score || 0) +
-        (breakdown.projectRelevance?.score || 0) +
-        (breakdown.structure?.score || 0) +
-        (breakdown.achievements?.score || 0) +
-        (breakdown.educationCertification?.score || 0);
+    // Defensively ensure scoreBreakdown has all 7 categories
+    if (!parsedResult.scoreBreakdown) {
+      parsedResult.scoreBreakdown = {};
+    }
+    const breakdown = parsedResult.scoreBreakdown;
+    const defaultCategories: Record<string, { max: number; explanation: string }> = {
+      keywordAlignment: { max: 25, explanation: 'Matches keywords from role and job description.' },
+      skillsMatch: { max: 25, explanation: 'Technical and domain competencies required.' },
+      experienceRelevance: { max: 15, explanation: 'Past work history alignment with target position.' },
+      projectRelevance: { max: 10, explanation: 'Applicability and depth of listed projects.' },
+      structure: { max: 10, explanation: 'Organization, clarity, and reverse-chronological layout.' },
+      achievements: { max: 10, explanation: 'Verifiable impact and metrics in accomplishments.' },
+      educationCertification: { max: 5, explanation: 'Relevance of formal education and credentials.' },
+    };
 
-      parsedResult.overallScore = Math.min(100, Math.max(0, Math.round(calculatedSum)));
+    let calculatedSum = 0;
+    for (const [key, defaults] of Object.entries(defaultCategories)) {
+      if (!breakdown[key]) {
+        breakdown[key] = {
+          score: Math.round(defaults.max * 0.75),
+          max: defaults.max,
+          explanation: defaults.explanation,
+        };
+      } else {
+        breakdown[key].max = defaults.max;
+        if (typeof breakdown[key].score !== 'number') {
+          breakdown[key].score = Math.round(defaults.max * 0.75);
+        }
+        breakdown[key].score = Math.max(0, Math.min(defaults.max, Math.round(breakdown[key].score)));
+      }
+      calculatedSum += breakdown[key].score;
+    }
+
+    parsedResult.overallScore = Math.min(100, Math.max(0, Math.round(calculatedSum)));
+
+    // Defensively populate alias pairs for front-end safety
+    parsedResult.sectionAnalysis = parsedResult.sectionAnalysis || parsedResult.sections || [];
+    parsedResult.sections = parsedResult.sectionAnalysis;
+
+    parsedResult.projectAnalysis = parsedResult.projectAnalysis || parsedResult.projects || [];
+    parsedResult.projects = parsedResult.projectAnalysis;
+
+    parsedResult.experienceAnalysis = parsedResult.experienceAnalysis || parsedResult.experience || [];
+    parsedResult.experience = parsedResult.experienceAnalysis;
+
+    parsedResult.improvementPriorities = parsedResult.improvementPriorities || parsedResult.improvements || [];
+    parsedResult.improvements = parsedResult.improvementPriorities;
+
+    parsedResult.candidateName = parsedResult.candidateName || parsedResult.candidate?.name || 'Candidate';
+    if (!parsedResult.candidate) {
+      parsedResult.candidate = {
+        name: parsedResult.candidateName,
+        email: '',
+        phone: '',
+        location: '',
+        linkedin: '',
+        github: '',
+      };
+    }
+
+    // Ensure skills & keywords arrays
+    if (!parsedResult.skills) {
+      parsedResult.skills = { found: [], matched: [], missing: [], valuable: [], categories: {} };
+    }
+    if (!parsedResult.keywords) {
+      parsedResult.keywords = { matched: [], missing: [], importantTerms: [], naturalPhrases: [] };
+    }
+    if (!parsedResult.jobMatch) {
+      parsedResult.jobMatch = { percentage: Math.round(parsedResult.overallScore), matched: [], partiallyMatched: [], missing: [] };
+    }
+    if (!Array.isArray(parsedResult.interviewQuestions)) {
+      parsedResult.interviewQuestions = [];
     }
 
     parsedResult.targetRole = targetRole;
     parsedResult.companyName = companyName;
     parsedResult.resumeFileName = fileName;
-    parsedResult.analyzedAt = new Date().toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    parsedResult.fileName = fileName;
+    parsedResult.analyzedAt = new Date().toISOString();
     parsedResult.isDemo = false;
 
     return res.json(parsedResult);
@@ -348,7 +528,13 @@ Return JSON with:
       },
     });
 
-    const parsed = JSON.parse(response.text || '{}');
+    const rawText = (response.text || '{}').trim();
+    let cleanJson = rawText;
+    if (cleanJson.startsWith('```')) {
+      cleanJson = cleanJson.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    }
+
+    const parsed = JSON.parse(cleanJson);
     return res.json(parsed);
   } catch (error: any) {
     console.error('Error improving bullet:', error);

@@ -13,6 +13,15 @@ import {
 } from 'lucide-react';
 import { InterviewQuestionItem } from '../types';
 
+const toText = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val.question || val.whyAsked || val.whatToCover || val.text || JSON.stringify(val);
+  }
+  return String(val);
+};
+
 interface InterviewQuestionsProps {
   questions: InterviewQuestionItem[];
 }
@@ -22,32 +31,37 @@ export const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({ question
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
 
   const categories = [
-    { label: 'All (20)', value: 'All' },
-    { label: 'Resume-Based (5)', value: 'Resume-based' },
-    { label: 'Technical (5)', value: 'Technical' },
-    { label: 'Project (5)', value: 'Project' },
-    { label: 'Behavioral (5)', value: 'Behavioral' },
+    { label: 'All', value: 'All' },
+    { label: 'Resume-Based', value: 'Resume-based' },
+    { label: 'Technical', value: 'Technical' },
+    { label: 'Project', value: 'Project' },
+    { label: 'Behavioral', value: 'Behavioral' },
   ];
 
   const getCategoryBadge = (category: string) => {
-    switch (category) {
-      case 'Resume-based':
-        return { icon: Briefcase, color: 'text-indigo-700 bg-indigo-50 border-indigo-200' };
-      case 'Technical':
-        return { icon: Code, color: 'text-blue-700 bg-blue-50 border-blue-200' };
-      case 'Project':
-        return { icon: FolderGit2, color: 'text-purple-700 bg-purple-50 border-purple-200' };
-      case 'Behavioral':
-        return { icon: Users, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
-      default:
-        return { icon: MessageSquare, color: 'text-slate-700 bg-slate-100 border-slate-200' };
+    const norm = String(category || '').toLowerCase();
+    if (norm.includes('resume')) {
+      return { icon: Briefcase, color: 'text-indigo-700 bg-indigo-50 border-indigo-200' };
     }
+    if (norm.includes('tech') || norm.includes('code')) {
+      return { icon: Code, color: 'text-blue-700 bg-blue-50 border-blue-200' };
+    }
+    if (norm.includes('proj')) {
+      return { icon: FolderGit2, color: 'text-purple-700 bg-purple-50 border-purple-200' };
+    }
+    if (norm.includes('behav')) {
+      return { icon: Users, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+    }
+    return { icon: MessageSquare, color: 'text-slate-700 bg-slate-100 border-slate-200' };
   };
 
   const filteredQuestions =
     activeFilter === 'All'
-      ? questions
-      : questions.filter((q) => q.category === activeFilter);
+      ? (questions || [])
+      : (questions || []).filter((q) =>
+          String(q.category || '').toLowerCase().includes(activeFilter.toLowerCase().replace(/[-_]/g, '')) ||
+          String(q.category || '').toLowerCase() === activeFilter.toLowerCase()
+        );
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 sm:p-8 space-y-6">
@@ -109,7 +123,7 @@ export const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({ question
                       {idx + 1}
                     </span>
                     <span className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
-                      {q.question}
+                      {toText(q.question)}
                     </span>
                   </div>
 
@@ -118,7 +132,7 @@ export const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({ question
                       className={`hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badge.color}`}
                     >
                       <BadgeIcon className="w-3 h-3" />
-                      {q.category}
+                      {toText(q.category) || 'General'}
                     </span>
                     {isExpanded ? (
                       <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -135,7 +149,7 @@ export const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({ question
                       <HelpCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                       <div>
                         <span className="font-bold block mb-0.5">Why the interviewer asks this:</span>
-                        <p className="leading-relaxed">{q.whyAsked}</p>
+                        <p className="leading-relaxed">{toText(q.whyAsked)}</p>
                       </div>
                     </div>
 
@@ -144,7 +158,7 @@ export const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({ question
                       <Lightbulb className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                       <div>
                         <span className="font-bold block mb-0.5">What you should cover (How to structure your answer):</span>
-                        <p className="leading-relaxed">{q.whatToCover}</p>
+                        <p className="leading-relaxed">{toText(q.whatToCover)}</p>
                       </div>
                     </div>
                   </div>

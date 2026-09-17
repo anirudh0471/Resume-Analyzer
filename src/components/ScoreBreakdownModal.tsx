@@ -2,6 +2,15 @@ import React from 'react';
 import { X, CheckCircle2, AlertCircle, Info, ShieldCheck } from 'lucide-react';
 import { ScoreBreakdown } from '../types';
 
+const toText = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val.explanation || val.reason || val.text || val.detail || JSON.stringify(val);
+  }
+  return String(val);
+};
+
 interface ScoreBreakdownModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -128,7 +137,7 @@ export const ScoreBreakdownModal: React.FC<ScoreBreakdownModalProps> = ({
                         {max}
                       </td>
                       <td className="py-3 px-4 text-slate-600 text-xs leading-relaxed">
-                        {row.category?.explanation || 'Evaluated against candidate resume content.'}
+                        {toText(row.category?.explanation) || 'Evaluated against candidate resume content.'}
                       </td>
                     </tr>
                   );

@@ -13,6 +13,15 @@ import {
 } from 'lucide-react';
 import { ResumeAnalysisResult } from '../types';
 
+const toText = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val.bullet || val.improved || val.text || val.after || val.item || val.skill || val.name || JSON.stringify(val);
+  }
+  return String(val);
+};
+
 interface ImproveResumeModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -62,8 +71,13 @@ export const ImproveResumeModal: React.FC<ImproveResumeModalProps> = ({
       });
 
       const data = await response.json();
-      if (data.improved) {
-        setCustomResult(data.improved);
+      if (data) {
+        setCustomResult({
+          original: data.original || customOriginal,
+          improved: typeof data.improved === 'string' ? data.improved : (typeof data === 'string' ? data : ''),
+          whyBetter: data.whyBetter || 'Uses strong action verbs and emphasizes measurable results.',
+          metricPrompt: data.metricPlaceholderNote || data.metricPrompt || 'Add your verified metrics where indicated in brackets.',
+        });
       }
     } catch (err) {
       console.error('Failed to improve custom bullet:', err);
@@ -187,7 +201,7 @@ export const ImproveResumeModal: React.FC<ImproveResumeModalProps> = ({
 
                 <p className="text-slate-800 leading-relaxed font-medium">
                   {`Results-driven ${result.targetRole} with proven expertise in ${
-                    result.skills.matched?.slice(0, 3).join(', ') || 'data analytics and SQL'
+                    (result.skills?.matched || []).slice(0, 3).map(toText).join(', ') || 'data analytics and SQL'
                   }. Experienced in pipeline optimization, reporting automation, and collaborative business intelligence delivery.`}
                 </p>
 
@@ -209,33 +223,36 @@ export const ImproveResumeModal: React.FC<ImproveResumeModalProps> = ({
                   <div key={eIdx} className="space-y-3 border-b border-slate-100 pb-4 last:border-none">
                     <h4 className="font-bold text-slate-900 text-sm">{exp.role} @ {exp.company}</h4>
                     {exp.suggestedBullets && exp.suggestedBullets.length > 0 ? (
-                      exp.suggestedBullets.map((bullet, bIdx) => (
-                        <div key={bIdx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                              Improved Bullet #{bIdx + 1}
-                            </span>
-                            <button
-                              onClick={() => handleCopy(bullet, `exp-${eIdx}-${bIdx}`)}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
-                            >
-                              {copiedId === `exp-${eIdx}-${bIdx}` ? (
-                                <>
-                                  <Check className="w-3 h-3 text-emerald-600" /> Copied
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3 h-3" /> Copy
-                                </>
-                              )}
-                            </button>
+                      exp.suggestedBullets.map((bullet, bIdx) => {
+                        const bulletText = toText(bullet);
+                        return (
+                          <div key={bIdx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                                Improved Bullet #{bIdx + 1}
+                              </span>
+                              <button
+                                onClick={() => handleCopy(bulletText, `exp-${eIdx}-${bIdx}`)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
+                              >
+                                {copiedId === `exp-${eIdx}-${bIdx}` ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-emerald-600" /> Copied
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3" /> Copy
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            <p className="text-slate-800 leading-relaxed font-medium">{bulletText}</p>
+                            <p className="text-[11px] text-slate-500">
+                              <strong>Where to add metric:</strong> Insert your actual runtime reduction %, query latency decrease, or team stakeholder count.
+                            </p>
                           </div>
-                          <p className="text-slate-800 leading-relaxed font-medium">{bullet}</p>
-                          <p className="text-[11px] text-slate-500">
-                            <strong>Where to add metric:</strong> Insert your actual runtime reduction %, query latency decrease, or team stakeholder count.
-                          </p>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <p className="text-slate-400 italic">No bullet suggestions for this role.</p>
                     )}
@@ -255,33 +272,36 @@ export const ImproveResumeModal: React.FC<ImproveResumeModalProps> = ({
                   <div key={pIdx} className="space-y-3 border-b border-slate-100 pb-4 last:border-none">
                     <h4 className="font-bold text-slate-900 text-sm">{proj.name}</h4>
                     {proj.suggestedBullets && proj.suggestedBullets.length > 0 ? (
-                      proj.suggestedBullets.map((bullet, bIdx) => (
-                        <div key={bIdx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
-                              Refined Project Bullet
-                            </span>
-                            <button
-                              onClick={() => handleCopy(bullet, `proj-${pIdx}-${bIdx}`)}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
-                            >
-                              {copiedId === `proj-${pIdx}-${bIdx}` ? (
-                                <>
-                                  <Check className="w-3 h-3 text-emerald-600" /> Copied
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3 h-3" /> Copy
-                                </>
-                              )}
-                            </button>
+                      proj.suggestedBullets.map((bullet, bIdx) => {
+                        const bulletText = toText(bullet);
+                        return (
+                          <div key={bIdx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
+                                Refined Project Bullet
+                              </span>
+                              <button
+                                onClick={() => handleCopy(bulletText, `proj-${pIdx}-${bIdx}`)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
+                              >
+                                {copiedId === `proj-${pIdx}-${bIdx}` ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-emerald-600" /> Copied
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3" /> Copy
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            <p className="text-slate-800 leading-relaxed font-medium">{bulletText}</p>
+                            <p className="text-[11px] text-slate-500">
+                              <strong>Where to add real metric:</strong> {proj.missingMeasurableResults || 'Include dataset size (e.g. 50K rows) or processing speed.'}
+                            </p>
                           </div>
-                          <p className="text-slate-800 leading-relaxed font-medium">{bullet}</p>
-                          <p className="text-[11px] text-slate-500">
-                            <strong>Where to add real metric:</strong> {proj.missingMeasurableResults || 'Include dataset size (e.g. 50K rows) or processing speed.'}
-                          </p>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <p className="text-slate-400 italic">No bullet suggestions for this project.</p>
                     )}

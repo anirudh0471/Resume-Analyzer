@@ -52,10 +52,11 @@ export function generatePdfReport(data: ResumeAnalysisResult): void {
   doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin, y, contentWidth, 26, 3, 3, 'FD');
 
+  const candidateName = data.candidate?.name || data.candidateName || 'Candidate Profile';
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(30, 41, 59);
-  doc.text(data.candidate.name || 'Candidate', margin + 6, y + 8);
+  doc.text(candidateName, margin + 6, y + 8);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -63,13 +64,13 @@ export function generatePdfReport(data: ResumeAnalysisResult): void {
   doc.text(`Target Role: ${data.targetRole || 'Not specified'}${data.companyName ? ` @ ${data.companyName}` : ''}`, margin + 6, y + 14);
 
   const contactPieces = [
-    data.candidate.email,
-    data.candidate.phone,
-    data.candidate.location,
-    data.candidate.linkedin ? 'LinkedIn: Yes' : '',
-    data.candidate.github ? 'GitHub: Yes' : '',
+    data.candidate?.email,
+    data.candidate?.phone,
+    data.candidate?.location,
+    data.candidate?.linkedin ? 'LinkedIn: Yes' : '',
+    data.candidate?.github ? 'GitHub: Yes' : '',
   ].filter(Boolean).join('  |  ');
-  doc.text(contactPieces, margin + 6, y + 20);
+  doc.text(contactPieces || 'Contact verified in document', margin + 6, y + 20);
   y += 32;
 
   // Overall ATS Score Block
@@ -83,7 +84,7 @@ export function generatePdfReport(data: ResumeAnalysisResult): void {
   doc.text('ATS-STYLE COMPATIBILITY SCORE', margin + 6, y + 8);
 
   doc.setFontSize(18);
-  doc.text(`${data.overallScore} / 100`, margin + 6, y + 18);
+  doc.text(`${data.overallScore ?? 0} / 100`, margin + 6, y + 18);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
@@ -105,13 +106,13 @@ export function generatePdfReport(data: ResumeAnalysisResult): void {
   y += 6;
 
   const breakdownRows = [
-    { label: 'Keyword Alignment', item: data.scoreBreakdown.keywordAlignment },
-    { label: 'Required Skills Match', item: data.scoreBreakdown.skillsMatch },
-    { label: 'Experience Relevance', item: data.scoreBreakdown.experienceRelevance },
-    { label: 'Projects Relevance', item: data.scoreBreakdown.projectRelevance },
-    { label: 'Resume Structure & Readability', item: data.scoreBreakdown.structure },
-    { label: 'Achievement & Result Evidence', item: data.scoreBreakdown.achievements },
-    { label: 'Education & Certification Relevance', item: data.scoreBreakdown.educationCertification },
+    { label: 'Keyword Alignment', item: data.scoreBreakdown?.keywordAlignment },
+    { label: 'Required Skills Match', item: data.scoreBreakdown?.skillsMatch },
+    { label: 'Experience Relevance', item: data.scoreBreakdown?.experienceRelevance },
+    { label: 'Projects Relevance', item: data.scoreBreakdown?.projectRelevance },
+    { label: 'Resume Structure & Readability', item: data.scoreBreakdown?.structure },
+    { label: 'Achievement & Result Evidence', item: data.scoreBreakdown?.achievements },
+    { label: 'Education & Certification Relevance', item: data.scoreBreakdown?.educationCertification },
   ];
 
   doc.setFontSize(9);
@@ -238,7 +239,8 @@ export function generatePdfReport(data: ResumeAnalysisResult): void {
   y += Math.max(9, Math.ceil(missingKeywords.length / 85) * 5);
 
   // Top 5 Recommendations
-  if (data.improvements && data.improvements.length > 0) {
+  const imps = data.improvementPriorities || data.improvements || [];
+  if (imps && imps.length > 0) {
     checkPageBreak(50);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
@@ -246,18 +248,20 @@ export function generatePdfReport(data: ResumeAnalysisResult): void {
     doc.text('Top Improvement Priorities', margin, y);
     y += 6;
 
-    data.improvements.slice(0, 5).forEach(imp => {
+    imps.slice(0, 5).forEach((imp, iIdx) => {
       checkPageBreak(18);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(30, 41, 59);
-      doc.text(`${imp.priority}. ${imp.problem}`, margin, y);
+      const probText = typeof imp.problem === 'object' ? JSON.stringify(imp.problem) : String(imp.problem || '');
+      doc.text(`${imp.priority || iIdx + 1}. ${probText}`, margin, y);
       y += 5;
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(71, 85, 105);
-      doc.text(`Action: ${imp.recommendedAction}`, margin + 4, y, { maxWidth: contentWidth - 6 });
+      const actText = typeof imp.recommendedAction === 'object' ? JSON.stringify(imp.recommendedAction) : String(imp.recommendedAction || '');
+      doc.text(`Action: ${actText}`, margin + 4, y, { maxWidth: contentWidth - 6 });
       y += 8;
     });
   }

@@ -6,6 +6,15 @@ interface QualityChecksProps {
   checks?: QualityCheckItem[];
 }
 
+const toText = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val.title || val.detail || val.text || val.message || JSON.stringify(val);
+  }
+  return String(val);
+};
+
 export const QualityChecks: React.FC<QualityChecksProps> = ({ checks }) => {
   // Default checklist fallbacks if backend model returned a subset
   const defaultList: QualityCheckItem[] = [
@@ -93,8 +102,8 @@ export const QualityChecks: React.FC<QualityChecksProps> = ({ checks }) => {
               )}
 
               <div className="text-xs">
-                <span className="font-bold text-slate-900 block">{check.title}</span>
-                <p className="text-slate-600 mt-0.5 leading-relaxed">{check.detail}</p>
+                <span className="font-bold text-slate-900 block">{toText(check.title)}</span>
+                <p className="text-slate-600 mt-0.5 leading-relaxed">{toText(check.detail)}</p>
               </div>
             </div>
           );
